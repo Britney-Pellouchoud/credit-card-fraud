@@ -10,7 +10,9 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 # Path to data folder (sibling of random_scripts)
 data_folder = os.path.join(script_dir, "../data")
 original_csv = "/Users/britneypellouchoud/credit-card-fraud/data/creditcard_2023.csv"
-sample_csv = "/Users/britneypellouchoud/credit-card-fraud/data/creditcard_2023_sample100.csv"
+sample_csv = (
+    "/Users/britneypellouchoud/credit-card-fraud/data/creditcard_2023_sample100.csv"
+)
 
 # Check if the original CSV exists
 if not os.path.exists(original_csv):
@@ -20,7 +22,9 @@ if not os.path.exists(original_csv):
 df = pd.read_csv(original_csv)
 
 # Take a random sample of 100 rows
-sample_df = df.sample(n=100, random_state=None)  # random_state=None gives a fresh random sample each time
+sample_df = df.sample(
+    n=100, random_state=None
+)  # random_state=None gives a fresh random sample each time
 
 # Save the sample (overwrites if it exists)
 sample_df.to_csv(sample_csv, index=False)
@@ -28,7 +32,7 @@ sample_df.to_csv(sample_csv, index=False)
 print(f"Fresh 100-row sample created/overwritten: {sample_csv}")
 
 # Paths
-data_folder = "../data"  
+data_folder = "../data"
 
 # Check if the original CSV exists
 if not os.path.exists(original_csv):
@@ -38,7 +42,9 @@ if not os.path.exists(original_csv):
 df = pd.read_csv(original_csv)
 
 # Take a random sample of 100 rows
-sample_df = df.sample(n=100, random_state=None)  # random_state=None gives a fresh random sample each time
+sample_df = df.sample(
+    n=100, random_state=None
+)  # random_state=None gives a fresh random sample each time
 
 # Save the sample (overwrites if it exists)
 sample_df.to_csv(sample_csv, index=False)

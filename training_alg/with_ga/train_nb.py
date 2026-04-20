@@ -5,25 +5,42 @@ import os
 
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score
+)
+
+from config import DATA_PATH, FEATURE_PATH
 
 
 class NaiveBayesTrainer:
     def __init__(self):
         self.model = GaussianNB()
 
-    def load_data(self, path):
-        df = pd.read_csv(path)
+    # -----------------------------
+    # DATA LOADING (STANDARDIZED)
+    # -----------------------------
+    def load_data(self):
+        df = pd.read_csv(DATA_PATH)
 
         X = df.drop(columns=["target"])
         y = df["target"]
 
         return X, y
 
-    def load_features(self, path="selected_features.json"):
-        with open(path, "r") as f:
+    # -----------------------------
+    # FEATURE LOADING (GA)
+    # -----------------------------
+    def load_features(self):
+        with open(FEATURE_PATH, "r") as f:
             return json.load(f)
 
+    # -----------------------------
+    # TRAIN + EVALUATE
+    # -----------------------------
     def train(self, X, y, features):
 
         # apply GA-selected features
@@ -42,34 +59,52 @@ class NaiveBayesTrainer:
         self.model.fit(X_train, y_train)
 
         preds = self.model.predict(X_test)
+        probs = self.model.predict_proba(X_test)[:, 1]
 
-        acc = accuracy_score(y_test, preds)
+        results = {
+            "accuracy": accuracy_score(y_test, preds),
+            "precision": precision_score(y_test, preds),
+            "recall": recall_score(y_test, preds),
+            "f1": f1_score(y_test, preds),
+            "auc": roc_auc_score(y_test, probs)
+        }
 
         print("\n📊 Naive Bayes Results")
-        print("Accuracy:", acc)
-        print("\nClassification Report:")
-        print(classification_report(y_test, preds))
+        for k, v in results.items():
+            print(f"{k.capitalize():10}: {v:.4f}")
 
-        # -----------------------------
-        # 💾 SAVE MODEL
-        # -----------------------------
-        model_dir = "models"
-        os.makedirs(model_dir, exist_ok=True)
+        return results
 
-        model_path = os.path.join(model_dir, "naive_bayes.joblib")
-        joblib.dump(self.model, model_path)
-
-        print(f"\n💾 Model saved to {model_path}")
-
-        return acc
+    # -----------------------------
+    # SAVE MODEL
+    # -----------------------------
+    def save_model(self, path="models/naive_bayes.joblib"):
+        os.makedirs("models", exist_ok=True)
+        joblib.dump(self.model, path)
+        print(f"\n💾 Model saved to {path}")
 
 
-if __name__ == "__main__":
+# -----------------------------
+# MAIN
+# -----------------------------
+
+
+def run_experiment():
+
 
     trainer = NaiveBayesTrainer()
 
-    X, y = trainer.load_data("../data/processed/train.csv")
-
+    X, y = trainer.load_data()
     features = trainer.load_features()
 
-    trainer.train(X, y, features)
+    results = trainer.train(X, y, features)
+
+    trainer.save_model()
+
+    print("METRICS_START", json.dumps(results), "METRICS_END")
+    return results
+
+
+
+if __name__ == "__main__":
+    print(run_experiment())

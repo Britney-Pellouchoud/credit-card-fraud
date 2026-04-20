@@ -37,11 +37,7 @@ class DataPreprocessor:
 
     def split_train_test(self, X, y):
         return train_test_split(
-            X,
-            y,
-            test_size=self.test_size,
-            stratify=y,
-            random_state=self.random_state
+            X, y, test_size=self.test_size, stratify=y, random_state=self.random_state
         )
 
     def scale(self, X_train, X_test):
@@ -101,9 +97,7 @@ class DataPreprocessor:
 if __name__ == "__main__":
     preprocessor = DataPreprocessor()
 
-    X_train, X_test, y_train, y_test = preprocessor.run(
-        "creditcard_2023.csv"   # ✅ FIXED PATH
-    )
+    X_train, X_test, y_train, y_test = preprocessor.run("creditcard_2023.csv")
 
     print("\nFinal Shapes:")
     print("Train:", X_train.shape)

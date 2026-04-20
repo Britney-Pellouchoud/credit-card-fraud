@@ -1,11 +1,26 @@
+import json
+import os
 import pandas as pd
+import joblib
+
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score
+)
+
+from config import DATA_PATH
 
 
-def load_data(path):
-    df = pd.read_csv(path)
+# -----------------------------
+# DATA LOADING (STANDARDIZED)
+# -----------------------------
+def load_data():
+    df = pd.read_csv(DATA_PATH)
 
     X = df.drop(columns=["target"])
     y = df["target"]
@@ -13,9 +28,15 @@ def load_data(path):
     return X, y
 
 
-if __name__ == "__main__":
+# -----------------------------
+# MAIN
+# -----------------------------
 
-    X, y = load_data("../train_processed.csv")
+
+def run_experiment():
+
+
+    X, y = load_data()
 
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -30,7 +51,41 @@ if __name__ == "__main__":
     model.fit(X_train, y_train)
 
     preds = model.predict(X_test)
+    probs = model.predict_proba(X_test)[:, 1]
 
-    print("\n🌳 Decision Tree (NO GA)")
-    print("Accuracy:", accuracy_score(y_test, preds))
-    print(classification_report(y_test, preds))
+    # -----------------------------
+    # METRICS
+    # -----------------------------
+    results = {
+        "accuracy": accuracy_score(y_test, preds),
+        "precision": precision_score(y_test, preds),
+        "recall": recall_score(y_test, preds),
+        "f1": f1_score(y_test, preds),
+        "auc": roc_auc_score(y_test, probs)
+    }
+
+    print("\n🌳 Decision Tree (NO GA) Results")
+    for k, v in results.items():
+        print(f"{k.capitalize():10}: {v:.4f}")
+
+    # -----------------------------
+    # SAVE MODEL
+    # -----------------------------
+    save_dir = "models"
+    os.makedirs(save_dir, exist_ok=True)
+
+    model_path = os.path.join(save_dir, "decision_tree_no_ga.joblib")
+    joblib.dump(model, model_path)
+
+    print(f"\n💾 Model saved to: {model_path}")
+
+    # -----------------------------
+    # ORCHESTRATION OUTPUT
+    # -----------------------------
+    print("METRICS_START", json.dumps(results), "METRICS_END")
+    return results
+
+
+
+if __name__ == "__main__":
+    print(run_experiment())

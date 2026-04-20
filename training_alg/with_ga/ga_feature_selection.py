@@ -15,7 +15,7 @@ class GeneticFeatureSelector:
         generations=5,
         crossover_rate=0.8,
         mutation_rate=0.1,
-        random_state=42
+        random_state=42,
     ):
         self.population_size = population_size
         self.generations = generations
@@ -42,8 +42,7 @@ class GeneticFeatureSelector:
     # -----------------------------
     def init_population(self, n_features):
         return [
-            np.random.randint(0, 2, n_features)
-            for _ in range(self.population_size)
+            np.random.randint(0, 2, n_features) for _ in range(self.population_size)
         ]
 
     # -----------------------------
@@ -62,9 +61,9 @@ class GeneticFeatureSelector:
         X_vl = X_val[cols]
 
         model = RandomForestClassifier(
-            n_estimators=30,      # reduced for speed
+            n_estimators=30,  # reduced for speed
             random_state=self.random_state,
-            n_jobs=-1
+            n_jobs=-1,
         )
 
         model.fit(X_tr, y_train)
@@ -118,11 +117,7 @@ class GeneticFeatureSelector:
 
         # IMPORTANT: single fixed split (huge speedup)
         X_train, X_val, y_train, y_val = train_test_split(
-            X,
-            y,
-            test_size=0.2,
-            random_state=self.random_state,
-            stratify=y
+            X, y, test_size=0.2, random_state=self.random_state, stratify=y
         )
 
         population = self.init_population(n_features)
@@ -133,8 +128,7 @@ class GeneticFeatureSelector:
         for gen in range(self.generations):
 
             fitnesses = [
-                self.fitness(X_train, X_val, y_train, y_val, ind)
-                for ind in population
+                self.fitness(X_train, X_val, y_train, y_val, ind) for ind in population
             ]
 
             gen_best = np.max(fitnesses)
@@ -154,14 +148,14 @@ class GeneticFeatureSelector:
 
             for i in range(0, len(population), 2):
                 p1 = population[i]
-                p2 = population[i+1] if i+1 < len(population) else population[i]
+                p2 = population[i + 1] if i + 1 < len(population) else population[i]
 
                 c1, c2 = self.crossover(p1, p2)
 
                 next_gen.append(self.mutate(c1))
                 next_gen.append(self.mutate(c2))
 
-            population = next_gen[:self.population_size]
+            population = next_gen[: self.population_size]
 
         selected_features = X.columns[np.where(best_individual == 1)[0]]
 
@@ -173,12 +167,9 @@ class GeneticFeatureSelector:
 # -----------------------------
 if __name__ == "__main__":
 
-    selector = GeneticFeatureSelector(
-        population_size=8,
-        generations=5
-    )
+    selector = GeneticFeatureSelector(population_size=8, generations=5)
 
-    X, y = selector.load_data("../data/processed/train.csv")
+    X, y = selector.load_data("DATA_PATH")
 
     features, score = selector.run(X, y)
 
