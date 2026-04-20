@@ -1,2 +1,5 @@
 data/train_processed.csv
 data/test_processed.csv
+training_alg/data/processed/test.csv
+training_alg/data/processed/train.csv
+training_alg/data/creditcard_2023.csv
