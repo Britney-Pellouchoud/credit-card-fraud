@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import random
+import json
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
@@ -184,3 +185,11 @@ if __name__ == "__main__":
     print("\nBest features:")
     print(list(features))
     print("Best score:", score)
+
+    # -----------------------------
+    # 💾 SAVE FEATURES FOR OTHER MODELS
+    # -----------------------------
+    with open("selected_features.json", "w") as f:
+        json.dump(list(features), f)
+
+    print("\n💾 Saved selected features to selected_features.json")
