@@ -1,98 +1,150 @@
-## Why GA Feature Selection Did Not Improve Results (Despite Using the Same Dataset)
+# 📊 Credit Card Fraud Detection Pipeline (GA + Paper Reproduction)
 
-Although the same credit card fraud dataset is used as in the paper by Emmanuel Ileberi et al. (2022), the difference in results can be attributed to differences in evaluation methodology and model behavior.
+## Overview
 
-### 1. Random Forest Already Performs Feature Selection
+This project implements a full machine learning pipeline for credit card fraud detection, including:
+- Genetic Algorithm (GA) based feature selection
+- Baseline model evaluation
+- Paper-style experimental tables (2–7)
+- ROC curve generation (Figures 4–8)
+- Fully reproducible experimental runs
 
-The paper uses Random Forest (RF) as the fitness function within the Genetic Algorithm (GA). However, RF inherently performs feature selection through its tree-based structure and is robust to irrelevant features.
-
-As a result:
-- RF can ignore noisy or redundant features on its own
-- GA provides limited additional benefit when paired with RF
-
-In other words, GA is optimizing something that is already strong, leading to minimal observable improvement.
-
----
-
-### 2. Differences in Evaluation Methodology
-
-The paper optimizes GA feature subsets based on classification accuracy. However, this accuracy may not be computed on strictly held-out data during the GA process.
-
-In contrast, this implementation:
-- Uses a proper train/test split
-- Applies SMOTE only on training data
-- Evaluates performance on unseen test data
-
-This results in:
-- More realistic performance estimates
-- Less optimistic (but more trustworthy) results
+The goal is to replicate a research-style pipeline comparing feature selection strategies against full and random feature baselines.
 
 ---
 
-### 3. Ceiling Effect from a Highly Separable Dataset
+## 🔁 End-to-End Pipeline Flow
 
-The credit card fraud dataset is highly separable:
-- Models already achieve very high accuracy (~99%+)
-- AUC scores are near optimal
+### 1. Data Loading
+The pipeline loads the raw credit card fraud dataset: training_alg/data/raw/creditcard.csv
 
-This creates a **ceiling effect**, where:
-- There is little room for improvement
-- Feature selection methods like GA cannot significantly boost performance
+
+It then:
+- Splits features (X) and target label (y)
+- Applies preprocessing (encoding / cleaning)
 
 ---
 
-### 4. Use of Stronger Evaluation Metrics
+### 2. Train/Test Split
+The dataset is split using a stratified split:
 
-The paper primarily reports **accuracy**, which can be misleading for imbalanced datasets.
+- 80% training
+- 20% testing
+- Stratified to preserve fraud class imbalance
 
-This implementation includes:
+---
+
+### 3. Genetic Algorithm (Feature Selection)
+
+A custom Genetic Algorithm (`PaperGA`) is used to select optimal feature subsets.
+
+Key properties:
+- Binary chromosome representation (feature included/excluded)
+- Fitness function = Random Forest validation accuracy
+- Internal 80/20 split inside fitness evaluation
+- Tournament selection
+- Single-point crossover
+- Random mutation
+
+Outputs:
+- 5 evolved feature vectors (v1–v5)
+- Convergence history of best fitness per generation
+
+---
+
+### 4. Model Evaluation (Tables 2–7)
+
+Each GA-selected feature set is evaluated using multiple models:
+
+- Random Forest (RF)
+- Decision Tree (DT)
+- Logistic Regression (LR)
+- Naive Bayes (NB)
+- Neural Network (MLP)
+
+Metrics computed:
+- Accuracy
 - Precision
 - Recall
 - F1-score
-- AUC
 
-These metrics:
-- Better capture fraud detection performance
-- Are more sensitive to model changes
-- Are harder to improve
+Additional baselines:
+- Full feature set model
+- Randomly selected feature subset
 
-As a result, improvements from GA are less apparent but more meaningful.
-
----
-
-## Why the Synthetic Demo *Does* Show Improvement
-
-To properly demonstrate GA effectiveness, a synthetic dataset was created using `make_classification` with:
-
-- 50 total features
-- 5 informative features
-- 5 redundant features
-- 40 noisy (irrelevant) features
-
-This setup introduces a scenario where feature selection is necessary.
-
-### Key Differences
-
-| Problem in Real Dataset | Fix in Synthetic Demo |
-|------------------------|----------------------|
-| RF already handles features | Add many useless features |
-| Little noise | Inject significant noise |
-| Hard to improve | Easier to improve |
-| GA redundant | GA becomes useful |
-
-👉 In this setting, GA successfully:
-- Identifies informative features
-- Removes noise
-- Improves model performance
+Outputs:
+- CSV tables saved per feature vector
+- Baseline comparison tables (full vs random vs GA)
 
 ---
 
-## Final Takeaway
+### 5. ROC Curve Generation (Figures 4–8)
 
-The lack of improvement from GA on the credit card dataset is not a failure of the method, but a consequence of:
+For each GA-selected feature vector:
+- A Random Forest classifier is trained
+- ROC curve is computed
+- AUC is recorded
 
-- Using a model (RF) that already handles feature selection
-- Working with a dataset that is already highly optimized and separable
-- Applying stricter and more realistic evaluation methods
+Outputs:
+- ROC plots saved to `outputs/figures/roc/`
+- Summary CSV + JSON of AUC scores
 
-When applied to datasets with noisy or high-dimensional feature spaces, GA feature selection demonstrates clear benefits, as shown in the synthetic experiment.
+---
+
+### 6. Genetic Algorithm Convergence Analysis
+
+The GA tracks:
+- Best fitness score per generation
+- Convergence behavior over time
+
+Output:
+- Convergence plots saved to `outputs/figures/convergence/`
+
+---
+
+## ⚙️ Configuration Modes
+
+The pipeline supports two execution modes:
+
+### Debug Mode
+Fast execution for testing:
+- Smaller GA population
+- Fewer generations
+- Reduced dataset size
+- Fewer estimators
+
+### Full Paper Mode
+Reproducible research setup:
+- GA_POP_SIZE = 20
+- GA_GENERATIONS = 30
+- Full dataset
+- Full model evaluation suite
+
+---
+
+## 📦 Outputs
+
+The pipeline generates:
+outputs/
+├── tables/
+│ ├── v1_table.csv
+│ ├── v2_table.csv
+│ ├── ...
+│ ├── full_table.csv
+│ └── random_table.csv
+├── figures/
+│ ├── roc/
+│ │ ├── roc curves
+│ │ └── auc_summary.json/csv
+│ └── convergence/
+└── run_summary.json
+
+
+---
+
+## 🚀 How to Run
+
+Run the full reproduction pipeline:
+
+```bash
+python -m orchestration.paper_run
