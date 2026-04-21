@@ -1,0 +1,7 @@
+=== BEST GA RESULT ===
+vector model  accuracy  precision   recall       f1      auc  is_ga
+    v3    LR  0.988589   0.119816 0.866667 0.210526 0.988081   True
+
+=== WORST GA RESULT ===
+vector model  accuracy  precision   recall       f1      auc  is_ga
+    v1    DT  0.996782   0.288136 0.566667 0.382022 0.782102   True
