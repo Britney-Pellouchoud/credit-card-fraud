@@ -1,111 +1,126 @@
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
-
+from sklearn.metrics import accuracy_score
+from config import RF_ESTIMATORS_GA
 
 class PaperGA:
+    """
+    Genetic Algorithm with:
+    - RF fitness function
+    - internal 20% validation split (paper exact)
+    - binary feature encoding
+    """
 
-    def __init__(self, pop_size=20, generations=30, mutation_rate=0.02, random_state=42):
+    def __init__(self, pop_size=10, generations=3, mutation_rate=0.01):
         self.pop_size = pop_size
         self.generations = generations
         self.mutation_rate = mutation_rate
-        self.rng = np.random.RandomState(random_state)
+        self.history = []
 
-    # -------------------------
-    def init_population(self, n_features):
-        return self.rng.randint(0, 2, (self.pop_size, n_features))
+    # --------------------------
+    # INIT POPULATION
+    # --------------------------
+    def _init_population(self, n_features):
+        return np.random.randint(0, 2, (self.pop_size, n_features))
 
-    # -------------------------
-    def fitness(self, X, y, ind, cols):
+    # --------------------------
+    # FITNESS FUNCTION (RF)
+    # --------------------------
+    def _fitness(self, individual, X, y):
 
-        selected = cols[np.where(ind == 1)[0]]
-
-        if len(selected) == 0:
+        # select features
+        if np.sum(individual) == 0:
             return 0
 
-        X_train, X_val, y_train, y_val = train_test_split(
-            X[selected], y,
+        cols = np.where(individual == 1)[0]
+        X_sel = X.iloc[:, cols]
+
+        # PAPER: internal split inside fitness
+        X_tr, X_val, y_tr, y_val = train_test_split(
+            X_sel, y,
             test_size=0.2,
-            stratify=y,
-            random_state=42
+            random_state=42,
+            stratify=y
         )
 
         model = RandomForestClassifier(
-            n_estimators=100,
+            n_estimators=RF_ESTIMATORS_GA,
             random_state=42,
             n_jobs=-1
         )
 
-        model.fit(X_train, y_train)
-        preds = model.predict_proba(X_val)[:, 1]
+        model.fit(X_tr, y_tr)
+        preds = model.predict(X_val)
 
-        return roc_auc_score(y_val, preds)
+        return accuracy_score(y_val, preds)
 
-    # -------------------------
-    def run(self, X, y):
+    # --------------------------
+    # SELECTION (tournament)
+    # --------------------------
+    def _select(self, pop, scores):
+        idx = np.random.choice(len(pop), 3, replace=False)
+        best = idx[np.argmax([scores[i] for i in idx])]
+        return pop[best]
 
-        cols = X.columns
-        pop = self.init_population(len(cols))
+    # --------------------------
+    # CROSSOVER (k=1 paper)
+    # --------------------------
+    def _crossover(self, p1, p2):
+        point = len(p1) // 2
+        child = np.concatenate([p1[:point], p2[point:]])
+        return child
 
-        best = None
-        best_score = 0
-
-        for _ in range(self.generations):
-
-            fitnesses = np.array([
-                self.fitness(X, y, ind, cols)
-                for ind in pop
-            ])
-
-            best_idx = np.argmax(fitnesses)
-
-            if fitnesses[best_idx] > best_score:
-                best_score = fitnesses[best_idx]
-                best = pop[best_idx]
-
-            # selection
-            idx = np.argsort(fitnesses)[-self.pop_size:]
-            pop = pop[idx]
-
-            # crossover + mutation
-            new_pop = []
-            for i in range(0, len(pop), 2):
-
-                p1 = pop[i]
-                p2 = pop[(i+1) % len(pop)]
-
-                point = self.rng.randint(1, len(p1)-1)
-
-                c1 = np.concatenate([p1[:point], p2[point:]])
-                c2 = np.concatenate([p2[:point], p1[point:]])
-
-                new_pop.append(self.mutate(c1))
-                new_pop.append(self.mutate(c2))
-
-            pop = np.array(new_pop)
-
-        return cols[np.where(best == 1)[0]]
-
-    # -------------------------
-    def mutate(self, ind):
+    # --------------------------
+    # MUTATION
+    # --------------------------
+    def _mutate(self, ind):
         for i in range(len(ind)):
-            if self.rng.rand() < self.mutation_rate:
+            if np.random.rand() < self.mutation_rate:
                 ind[i] = 1 - ind[i]
         return ind
 
-    # -------------------------
-    def run_multi_vectors(self, X, y, n_vectors=5):
+    # --------------------------
+    # MAIN GA LOOP
+    # --------------------------
+    def run(self, X, y):
 
-        vectors = []
-        base = self.run(X, y)
+        n_features = X.shape[1]
+        population = self._init_population(n_features)
 
-        cols = X.columns
+        best_ind = None
+        best_score = -1
 
-        # generate slight perturbations (paper-style diversity)
-        for _ in range(n_vectors):
-            mask = self.rng.randint(0, 2, len(cols))
-            vectors.append(cols[np.where(mask == 1)[0]])
+        for gen in range(self.generations):
+            print(f"Generation {gen} / {self.generations}")
+            scores = []
 
-        vectors[0] = base  # ensure best solution included
-        return vectors
+            for i, ind in enumerate(population):
+                print(f"Gen {gen} | Evaluating individual {i+1}/{self.pop_size}")
+                score = self._fitness(ind, X, y)
+                scores.append(score)
+
+            new_pop = []
+
+            for _ in range(self.pop_size):
+
+                p1 = self._select(population, scores)
+                p2 = self._select(population, scores)
+
+                child = self._crossover(p1, p2)
+                child = self._mutate(child)
+
+                new_pop.append(child)
+
+            population = np.array(new_pop)
+
+            # track best
+            gen_best_idx = np.argmax(scores)
+            if scores[gen_best_idx] > best_score:
+                best_score = scores[gen_best_idx]
+                best_ind = population.copy()[gen_best_idx]
+
+            self.history.append(best_score)
+
+        selected_features = np.where(best_ind == 1)[0]
+        return selected_features
